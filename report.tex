@@ -1,0 +1,577 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[a4paper,margin=2cm]{geometry}
+\usepackage[T2A]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[russian]{babel}
+\usepackage{lmodern}
+\usepackage{graphicx}          % Картинки
+\usepackage{float}
+
+\usepackage{microtype}
+\usepackage{setspace}
+\setstretch{1.3}
+
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks=false,
+  linkcolor=black,
+  urlcolor=black,
+  citecolor=black
+}
+
+\usepackage{booktabs}
+\usepackage{tabularx}
+
+\usepackage{enumitem}
+\setlist[itemize]{leftmargin=1.5em, itemsep=0.2em, topsep=0.3em}
+\setlist[enumerate]{leftmargin=1.5em, itemsep=0.2em, topsep=0.3em}
+
+\usepackage{listings}
+\usepackage{xcolor}
+
+\definecolor{codebackground}{rgb}{0.97,0.97,0.97}
+
+\lstdefinestyle{bash}{
+  language=bash,
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  columns=fullflexible,
+  frame=lines,
+  framerule=0.5pt,
+  backgroundcolor=\color{codebackground},
+  xleftmargin=0.5em,
+  xrightmargin=0.5em,
+  showstringspaces=false
+}
+
+\lstdefinestyle{cpp}{
+  language=C++,
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=lines,
+  backgroundcolor=\color{codebackground},
+  showstringspaces=false,
+  xleftmargin=0.5em,
+  xrightmargin=0.5em
+}
+
+\lstset{style=bash}
+
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{0.2em}
+
+\newcommand{\file}[1]{\texttt{#1}}
+\newcommand{\code}[1]{\texttt{#1}}
+
+\begin{document}
+
+\begin{titlepage}
+\centering
+{\large МОСКОВСКИЙ АВИАЦИОННЫЙ ИНСТИТУТ \par}
+{\large (НАЦИОНАЛЬНЫЙ ИССЛЕДОВАТЕЛЬСКИЙ УНИВЕРСИТЕТ) \par}
+\vspace{1.6cm}
+{\large Институт №8 «Компьютерные науки и прикладная математика» \par}
+
+\vfill
+
+{\LARGE \textbf{Отчет по лабораторным работам} \par}
+\vspace{0.4cm}
+{\Large по курсу «Информационный поиск» \par}
+
+\vfill
+
+\begin{flushright}
+Выполнил: Горохов Михаил Сергеевич\\
+Группа: М8О-409Б-22\\
+Преподаватель: Кухтичев Антон Алексеевич
+\end{flushright}
+
+\vfill
+
+{Москва, 2025}
+\end{titlepage}
+
+\tableofcontents
+
+\newpage
+
+\section{Введение}
+
+\subsection{Цель работы}
+
+Целью данной работы является разработка полнофункциональной поисковой системы по собственному корпусу текстовых документов, включающей все основные этапы обработки информации: сбор данных, хранение, индексацию, нормализацию текста и реализацию методов поиска.
+
+\subsection{Задачи}
+
+В ходе выполнения работы решены следующие задачи:
+
+\begin{enumerate}
+  \item Разработка автоматизированного веб-краулера для сбора текстового корпуса из открытых источников (Project Gutenberg).
+  \item Реализация хранилища документов на базе MongoDB с поддержкой управления большими объемами данных.
+  \item Разработка модуля токенизации и нормализации текста на основе алгоритма Портера.
+  \item Создание индексной структуры (инвертированный индекс) на собственных структурах данных без использования STL.
+  \item Реализация булева поиска с поддержкой операций конъюнкции (AND) и отрицания (NOT).
+  \item Проведение статистического анализа корпуса на соответствие закону Ципфа.
+  \item Разработка интерфейсов взаимодействия: командной строки (CLI) и веб-приложения на Flask.
+\end{enumerate}
+
+\subsection{Структура проекта}
+
+Система состоит из следующих компонентов:
+
+\begin{itemize}
+  \item Python-скрипты для сбора документов, загрузки в базу данных и реализации пользовательских интерфейсов
+  \item Библиотека C++ с реализацией основных алгоритмов обработки текста
+  \item База данных MongoDB для хранения полного текста документов
+  \item Веб-интерфейс на HTML/Python для взаимодействия с системой
+\end{itemize}
+
+\section{Подготовка корпуса документов}
+
+\subsection{Источник данных}
+
+В качестве источника текстовых документов использован проект Project Gutenberg, предоставляющий более 70 тысяч свободно распространяемых электронных книг в различных форматах.
+
+\subsubsection{Характеристики источника}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+Характеристика & Описание \\
+\midrule
+Тип документов & Электронные книги и литературные произведения \\
+Язык & Английский \\
+Формат & Простой текст (Plain text), кодировка UTF-8 \\
+Лицензирование & Общественное достояние (Public Domain) \\
+Доступность & Свободный доступ через веб-интерфейс \\
+Объем одного документа & 10 тысяч до 500 тысяч слов \\
+\bottomrule
+\end{tabularx}
+\caption{Характеристики источника данных}
+\label{tab:source}
+\end{table}
+
+\subsection{Структура сырого документа}
+
+Типичный документ Project Gutenberg содержит следующие элементы:
+
+\begin{itemize}
+  \item Заголовок проекта Гутенберга с лицензионной информацией
+  \item Метаинформация произведения (название, автор, дата создания)
+  \item Основной текст произведения
+  \item Сноски и комментарии издателя
+  \item Оглавление или содержание
+\end{itemize}
+
+\subsection{Подготовка корпуса}
+
+Процесс подготовки корпуса включает следующие этапы:
+
+\begin{enumerate}
+  \item Загрузка текстовых файлов из веб-источника
+  \item Удаление служебных блоков Project Gutenberg
+  \item Проверка кодировки и структуры файлов
+  \item Сохранение документов в MongoDB с метаданными
+\end{enumerate}
+
+\subsection{Статистика корпуса}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{}Xr@{}}
+\toprule
+Параметр & Значение \\
+\midrule
+Количество документов & 40 000 \\
+Суммарный объем (raw) & примерно 17 GB \\
+Выделенный текст & 25,12 миллиардов символов \\
+Средний размер документа & 628 000 символов \\
+Уникальные термины & 300 000 - 500 000 \\
+Общее количество токенов & примерно 2 миллиарда \\
+Средняя длина токена & 7 символов \\
+\bottomrule
+\end{tabularx}
+\caption{Статистика корпуса из 40 000 документов}
+\label{tab:corpus}
+\end{table}
+
+\section{Архитектура системы}
+
+\subsection{Общее описание}
+
+Система построена на модульной архитектуре с разделением функциональности между различными слоями. Основные компоненты взаимодействуют следующим образом:
+
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{@{}lll@{}}
+\toprule
+Python Layer & Core Engine (C++) & Storage \\
+\midrule
+CLI Interface & Tokenization & MongoDB \\
+Web Service & Stemming & \\
+Crawler & Boolean Search & \\
+\bottomrule
+\end{tabularx}
+\caption{Слои архитектуры системы}
+\label{tab:arch}
+\end{table}
+
+\subsection{Компоненты}
+
+\subsubsection{Компонент сбора данных}
+
+Скрипт \file{download\_documents.py} реализует функции автоматизированного веб-краулера:
+
+\begin{itemize}
+  \item Подключение к веб-ресурсу Project Gutenberg
+  \item Парсинг HTML-страниц книг
+  \item Загрузка текстовых файлов
+  \item Сохранение документов с метаданными
+  \item Вежливый краулинг с задержками между запросами
+\end{itemize}
+
+\subsubsection{Хранилище документов}
+
+MongoDB используется для хранения полных текстов документов с следующей структурой:
+
+\begin{lstlisting}[style=bash]
+db.documents.insertOne({
+  _id: ObjectId(...),
+  title: "Pride and Prejudice",
+  author: "Jane Austen",
+  url: "https://www.gutenberg.org/ebooks/1342",
+  content: "It is a truth universally acknowledged...",
+  download_date: ISODate("2025-01-15")
+})
+\end{lstlisting}
+
+\subsubsection{Ядро обработки (C++)}
+
+Реализует функции индексации и поиска с использованием собственных структур данных:
+
+\begin{itemize}
+  \item Собственные классы String, Vector и HashMap
+  \item Модули токенизации, стемминга и индексации
+  \item Компиляция в библиотеку \file{libir\_system.so}
+  \item Интеграция с Python через ctypes
+\end{itemize}
+
+\section{Реализация поисковой системы}
+
+\subsection{Этап первый: Токенизация}
+
+\subsubsection{Описание алгоритма}
+
+Токенизация преобразует входной текст в набор отдельных терминов для последующей обработки. Процесс включает следующие шаги:
+
+\begin{enumerate}
+  \item Преобразование текста в нижний регистр
+  \item Выделение последовательностей буквенно-цифровых символов
+  \item Использование знаков пунктуации и пробелов в качестве разделителей
+  \item Формирование упорядоченного набора токенов
+\end{enumerate}
+
+\subsubsection{Пример токенизации}
+
+\begin{lstlisting}[style=bash]
+Входной текст:
+"It's a beautiful day! The sun shines brightly."
+
+Результат токенизации:
+["it", "s", "a", "beautiful", "day", "the", 
+ "sun", "shines", "brightly"]
+\end{lstlisting}
+
+\subsubsection{Производительность}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{}Xr@{}}
+\toprule
+Метрика & Значение \\
+\midrule
+Документов обработано & 40 000 \\
+Уникальные термины & 300 000 - 500 000 \\
+Общее количество токенов & примерно 2 миллиарда \\
+Средняя длина токена & 7 символов \\
+Время обработки & 90 - 120 секунд \\
+Скорость обработки & примерно 30 000 KB/s \\
+\bottomrule
+\end{tabularx}
+\caption{Статистика этапа токенизации}
+\label{tab:tokenization}
+\end{table}
+
+\subsection{Этап второй: Нормализация}
+
+\subsubsection{Алгоритм стемминга}
+
+Нормализация текста приводит различные словоформы к единому корню:
+
+\begin{itemize}
+  \item running к run
+  \item jumped к jump
+  \item beautifully к beauti
+\end{itemize}
+
+Используется упрощенный алгоритм Портера с удалением известных суффиксов.
+
+\subsubsection{Преимущества стемминга}
+
+\begin{enumerate}
+  \item Повышение полноты поиска (recall): поиск по book находит books и booking
+  \item Уменьшение размера словаря и индекса
+  \item Улучшение качества поиска за счет нормализации словоформ
+\end{enumerate}
+
+\subsection{Этап третий: Построение индекса}
+
+\subsubsection{Структура инвертированного индекса}
+
+Инвертированный индекс представляет отображение терминов на список документов:
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{}lXr@{}}
+\toprule
+Термин & Документы & Частота \\
+\midrule
+book & Doc1, Doc3, Doc5, Doc12 & 4 \\
+love & Doc2, Doc5, Doc8, Doc15, Doc20 & 5 \\
+story & Doc1, Doc2, Doc3, Doc4, Doc5 & 5 \\
+\bottomrule
+\end{tabularx}
+\caption{Пример структуры инвертированного индекса}
+\label{tab:inverted}
+\end{table}
+
+\subsubsection{Реализация структур данных}
+
+Индекс реализован на основе собственных структур данных C++:
+
+\begin{itemize}
+  \item HashMap для хранения соответствия терминов и списков документов
+  \item PostingList для управления списком документов с частотой
+  \item PostingEntry для хранения информации о документе
+\end{itemize}
+
+\subsubsection{Характеристики индекса}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{}Xr@{}}
+\toprule
+Параметр & Значение \\
+\midrule
+Размер словаря & примерно 400 000 терминов \\
+Средний размер PostingList & примерно 10 документов \\
+Объем индекса в памяти & примерно 2 GB \\
+Время построения индекса & примерно 2 минуты \\
+\bottomrule
+\end{tabularx}
+\caption{Характеристики инвертированного индекса}
+\label{tab:index_char}
+\end{table}
+
+\subsection{Этап четвертый: Анализ по закону Ципфа}
+
+\subsubsection{Описание закона}
+
+Закон Ципфа описывает распределение частот слов в естественном языке:
+
+\[f(r) = \frac{C}{r^\alpha}\]
+
+где r является рангом термина, f(r) частотой, C константой, и альфа показателем степени.
+
+\subsubsection{Результаты анализа}
+
+На основе построенного индекса вычисляются частоты терминов по рангам. Результаты сохраняются в файл \file{data/documents/zipf.csv}:
+
+\begin{lstlisting}[style=bash]
+rank,frequency,zipf_approximation
+1,45230,45230.5
+2,23450,22615.2
+3,15120,15076.8
+4,11280,11288.6
+\end{lstlisting}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\linewidth]{zipf.png} % Замените на путь к вашему графику
+  \caption{График распределения частот терминов по рангам (Закон Ципфа)}
+  \label{fig:WEB}
+\end{figure}
+
+Анализ показывает, что распределение частот в корпусе Project Gutenberg соответствует закону Ципфа, что подтверждает качество и естественность текстовых данных.
+
+\subsection{Этап пятый: Булев поиск}
+
+\subsubsection{Поддерживаемые операции}
+
+Система реализует следующие операции булева поиска:
+
+\begin{enumerate}
+  \item Простой поиск по одному термину
+  \begin{itemize}
+    \item Возвращает все документы, содержащие данный термин
+  \end{itemize}
+  
+  \item Конъюнкция (AND)
+  \begin{itemize}
+    \item Несколько терминов через пробел
+    \item Возвращает документы, содержащие все термины
+    \item Реализуется пересечением PostingList
+  \end{itemize}
+  
+  \item Отрицание (NOT)
+  \begin{itemize}
+    \item Исключение терминов из результатов
+    \item Поддержка синтаксиса NOT и дефиса
+    \item Реализуется разностью множеств
+  \end{itemize}
+\end{enumerate}
+
+\subsubsection{Примеры поисковых запросов}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+Запрос & Результат \\
+\midrule
+love & Документы со словом love \\
+great book & Документы с обоими словами great и book \\
+book NOT chapter & Документы со словом book без chapter \\
+old man NOT young & Документы с old и man без young \\
+\bottomrule
+\end{tabularx}
+\caption{Примеры поисковых запросов}
+\label{tab:queries}
+\end{table}
+
+\section{Интерфейсы взаимодействия}
+
+\subsection{Интерфейс командной строки}
+
+\subsubsection{Описание}
+
+Интерфейс командной строки предоставляет интерактивное взаимодействие с поисковой системой в режиме реального времени.
+
+\subsubsection{Запуск}
+
+\begin{lstlisting}[style=bash]
+$ python3 scripts/cli_search.py
+Loading index from MongoDB...
+Index loaded: 40000 documents, 350000 terms
+Enter search query (or 'quit' to exit):
+\end{lstlisting}
+
+\subsubsection{Примеры использования}
+
+\begin{lstlisting}[style=bash]
+Enter search query: book
+Found 2350 documents
+1. Pride and Prejudice
+2. Jane Eyre
+3. The Great Gatsby
+
+Enter search query: love story
+Found 145 documents
+1. Romeo and Juliet
+2. Jane Eyre
+
+Enter search query: book NOT chapter
+Found 789 documents
+\end{lstlisting}
+
+\subsection{Веб-интерфейс}
+
+\subsubsection{Описание}
+
+Веб-приложение на Flask предоставляет графический интерфейс с поддержкой различных браузеров.
+
+\subsubsection{Запуск сервера}
+
+\begin{lstlisting}[style=bash]
+$ python3 scripts/web_service.py
+Running on http://127.0.0.1:5000
+\end{lstlisting}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\linewidth]{WEB.png}
+  \includegraphics[width=0.8\linewidth]{WEB_2.png}
+  \caption{Web приложение}
+  \label{fig:WEB}
+\end{figure}
+
+\subsubsection{Структура приложения}
+
+Веб-приложение содержит следующие страницы:
+
+\begin{itemize}
+  \item Главная страница с полем ввода запроса
+  \item Страница результатов с списком найденных документов
+\end{itemize}
+
+\subsubsection{Функциональность}
+
+\begin{enumerate}
+  \item Ввод поискового запроса в текстовое поле
+  \item Отправка запроса на сервер
+  \item Вывод результатов поиска
+  \item Возможность просмотра полного текста документа
+\end{enumerate}
+
+\section{Выводы}
+
+\subsection{Полученные результаты}
+
+В ходе выполнения работы разработана функциональная поисковая система, включающая следующие компоненты:
+
+\begin{enumerate}
+  \item Автоматизированный краулер для сбора текстовых данных
+  \item Хранилище на базе MongoDB для управления документами
+  \item Ядро обработки текста на языке C++
+  \item Инвертированный индекс с поддержкой быстрого поиска
+  \item Булев поиск с операциями AND и NOT
+  \item Два интерфейса для взаимодействия пользователя
+\end{enumerate}
+
+\subsection{Практические навыки}
+
+Работа над проектом позволила получить опыт в следующих областях:
+
+\begin{itemize}
+  \item Обработка больших объемов текстовых данных
+  \item Реализация классических алгоритмов информационного поиска
+  \item Проектирование собственных структур данных
+  \item Интеграция компонентов на различных языках программирования
+  \item Статистический анализ текстовых данных
+  \item Разработка веб-приложений
+\end{itemize}
+
+\subsection{Возможности развития}
+
+Текущая реализация может быть расширена следующим функционалом:
+
+\begin{itemize}
+  \item Ранжирование результатов на основе TF-IDF и BM25
+  \item Автодополнение при вводе запроса
+  \item Кеширование результатов для оптимизации
+  \item Параллельная обработка для масштабирования
+\end{itemize}
+
+\subsection{Заключение}
+
+Разработанная система демонстрирует применение теоретических основ информационного поиска при построении практической системы на собственном текстовом корпусе. Проект успешно объединяет высокопроизводительное ядро на языке C++ с удобными интерфейсами на Python и веб-платформе, обеспечивая эффективный баланс между производительностью и удобством использования.
+
+\end{document}

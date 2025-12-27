@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Information Retrieval System</title>
+    <style>
+        body { 
+            font-family: sans-serif; 
+            margin: 0; 
+            padding: 20px;
+            background-color: white; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            min-height: 100vh; 
+        }
+        h1 { text-align: center; margin-bottom: 30px; }
+        .search-form { margin-bottom: 20px; width: 100%; max-width: 600px; text-align: center; }
+        .search-form input[type="text"] { width: calc(100% - 100px); padding: 10px; border: 1px solid #ccc; border-radius: 5px; margin-right: 10px; }
+        .search-form button { padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .search-form button:hover { background-color: #0056b3; }
+        .search-results { border-top: 1px solid #ccc; padding-top: 20px; width: 100%; max-width: 800px; }
+        .document-item { margin-bottom: 15px; padding: 10px; border: 1px solid #eee; background-color: #f9f9f9; border-radius: 5px; }
+        .document-item h3 { margin-top: 0; color: #333; }
+        .document-item p { margin: 5px 0; }
+        .document-item strong { color: #555; }
+        .no-results { color: #888; text-align: center; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Information Retrieval System</h1>
+
+    <div class="search-form">
+        <form action="/search" method="get">
+            <input type="text" name="query" placeholder="Enter your search query..." size="50" value="{{ query or '' }}">
+            <button type="submit">Search</button>
+        </form>
+        <p style="font-size: 0.9em; color: #666; margin-top: 10px;">Currently supports implicit AND logic (e.g., "word1 word2") and NOT operator (e.g., "word1 NOT word2" or "word1 -word2").</p>
+    </div>
+
+    {% if results %}
+        <div class="search-results">
+            {% for doc in results %}
+                <div class="document-item">
+                    <h3>Document ID: {{ doc.id }}</h3>
+                    <p><strong>Title:</strong> {{ doc.title }}</p>
+                    <p><strong>URL:</strong> <a href="{{ doc.url }}" target="_blank">{{ doc.url }}</a></p>
+                </div>
+            {% endfor %}
+        </div>
+    {% elif query and results is not none %}
+        <div class="no-results">
+            <p>No documents found for your query: "{{ query }}"</p>
+        </div>
+    {% endif %}
+
+</body>
+</html>
